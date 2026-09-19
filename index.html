@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wedding RSVP</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; padding: 20px; text-align: center; }
+    .card { background: white; max-width: 450px; margin: 0 auto; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h1 { color: #2e5a44; margin-bottom: 5px; }
+    .details { font-size: 14px; color: #666; margin-bottom: 20px; }
+    input, select, textarea, button { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+    button { background-color: #2e5a44; color: white; border: none; font-weight: bold; cursor: pointer; }
+    button:hover { background-color: #1e3d2f; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>We Are Getting Married!</h1>
+  <div class="details">
+    <p><strong>📅 Petsa:</strong> December 18, 2026</p>
+    <p><strong>📍 Lokasyon:</strong> Silang, Cavite</p>
+  </div>
+
+  <hr style="border: 0.5px solid #eee; margin: 20px 0;">
+
+  <!-- Step 1: Search Name -->
+  <div id="step-search">
+    <h3>I-type ang iyong Buong Pangalan:</h3>
+    <input type="text" id="guestName" placeholder="Juan Dela Cruz">
+    <button onclick="searchGuest()">Hanapin ang RSVP</button>
+  </div>
+
+  <!-- Step 2: Confirm RSVP -->
+  <div id="step-rsvp" class="hidden">
+    <h3 id="welcomeText"></h3>
+    <p id="plusOneText"></p>
+
+    <label for="attending">Makakadalo ka ba?</label>
+    <select id="attending" onchange="toggleGuestInput()">
+      <option value="Yes">Oo, makakadalo ako</option>
+      <option value="No">Paumanhin, hindi ako makakadalo</option>
+    </select>
+
+    <div id="guestCountGroup">
+      <label for="guestsCount">Ilang tao ang dadalo (kasama ka)?</label>
+      <input type="number" id="guestsCount" min="1" value="1">
+    </div>
+
+    <label for="notes">Mensahe o Dietary Restrictions:</label>
+    <textarea id="notes" rows="3" placeholder="Opsyonal..."></textarea>
+
+    <button onclick="submitRSVP()">I-submit ang RSVP</button>
+  </div>
+
+  <p id="statusMessage" style="margin-top: 15px; font-weight: bold;"></p>
+</div>
+
+<script>
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbykVP7YNk2agaPmoSK1NGzo_NJdcvzyduC0N7a_TKrTu8BR47OlZSXmQLcWLT5KV4Pr5w/exec";
+  let currentGuest = null;
+
+  async function searchGuest() {
+    const name = document.getElementById('guestName').value;
+    const status = document.getElementById('statusMessage');
+    if (!name) return alert("Paki-type ang iyong pangalan.");
+
+    status.innerText = "Hina-hanap ang pangalan...";
+
+    try {
+      const res = await fetch(`${SCRIPT_URL}?name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+
+      if (data.found) {
+        currentGuest = data;
+        status.innerText = "";
+        document.getElementById('step-search').classList.add('hidden');
+        document.getElementById('step-rsvp').classList.remove('hidden');
+        
+        document.getElementById('welcomeText').innerText = `Mabuhay, ${data.name}!`;
+        
+        if (data.allowedPlusOnes > 0) {
+          document.getElementById('plusOneText').innerText = `Puwede kang magsama ng hanggang ${data.allowedPlusOnes} na kasama.`;
+          document.getElementById('guestsCount').max = data.allowedPlusOnes + 1;
+        } else {
+          document.getElementById('plusOneText').innerText = `Ang imbitasyong ito ay para sa iyo lamang.`;
+          document.getElementById('guestsCount').value = 1;
+          document.getElementById('guestsCount').disabled = true;
+        }
+      } else {
+        status.innerText = "Pasensya na, hindi mahanap ang pangalan mo sa guest list. Pakisuri ang spelling.";
+      }
+    } catch (err) {
+      status.innerText = "Nagka-error sa paghahanap. Pakisubukan ulit.";
+    }
+  }
+
+  function toggleGuestInput() {
+    const attending = document.getElementById('attending').value;
+    const group = document.getElementById('guestCountGroup');
+    if (attending === "No") {
+      group.style.display = "none";
+    } else {
+      group.style.display = "block";
+    }
+  }
+
+  async function submitRSVP() {
+    const status = document.getElementById('statusMessage');
+    status.innerText = "Isinusumite...";
+
+    const attending = document.getElementById('attending').value;
+    const guestsCount = attending === "Yes" ? document.getElementById('guestsCount').value : 0;
+    const notes = document.getElementById('notes').value;
+
+    const payload = {
+      name: currentGuest.name,
+      attending: attending,
+      guestsCount: guestsCount,
+      notes: notes
+    };
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+
+      status.innerText = "Salamat! Na-save na ang iyong tugon.";
+      document.getElementById('step-rsvp').classList.add('hidden');
+    } catch (err) {
+      status.innerText = "Nagka-error sa pag-save. Pakisubukan ulit.";
+    }
+  }
+</script>
+
+</body>
+</html>
